@@ -47,7 +47,7 @@ async function scrapeProduct(url) {
 }
 
 //plug in product url
-const productUrl = "https://sg.trip.com/things-to-do/detail/20557692" 
+const productUrl = "https://sg.trip.com/things-to-do/detail/37160766" 
 
 scrapeProduct(productUrl).then((data) => {
   prodName = data['productInfos']['0']['basicInfo']['productName'];
