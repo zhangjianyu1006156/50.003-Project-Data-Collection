@@ -106,12 +106,70 @@ export class WebScrapper {
     return String(dataTripCom['productInfos']['0']['basicInfo']['minPrice']);
   }
 
+  async scrapeTripComBD() {
+    await page.setRequestInterception(true);
+    let dataTripComBD = '';
+    page.on('request', async (interceptedRequest) => {
+      if (
+        interceptedRequest.method().includes('POST') &&
+        interceptedRequest.url().includes('/queryAdsDisplayData')
+      ) {
+        const methods = interceptedRequest.method();
+        const headerss = interceptedRequest.headers();
+        const postDatas = interceptedRequest.postData();
+
+        interceptedRequest.continue({
+          method: methods,
+          postData: postDatas,
+          headers: headerss
+        });
+      } else {
+        interceptedRequest.continue();
+      }
+    });
+
+    page.on('response', async (response) => {
+      if (response.url().includes('/queryAdsDisplayData')) {
+        await page.waitForTimeout(2000);
+        try {
+          dataTripComBD = await response.json();
+        } catch (error) {}
+      }
+    });
+
+    await page.goto('https://sg.trip.com/sale/deals/');
+    await page.waitForTimeout(5000);
+
+    ads = dataTripComBD["adsWidgetDataTypes"][0]["adsDisplayDataTypes"] 
+    //check if there's bank card discounts
+    const theresDiscounts = ads.some(ad => ad["tags"][0]["tagName"] == "Bank Card");
+    
+    if (theresDiscounts) {
+      var output = new Array();
+      ads.forEach((ad) => {
+        if (ad["tags"][0]["tagName"] == "Bank Card" 
+            && (ad["title"].includes("OCBC") ||ad["title"].includes("DBS/POSB"))) {
+              const disc = {"title": ad["title"],
+                            "description": ad["introduction"],
+                            "pageLink": ad["pageLink"]}
+              output.push(disc);
+            }
+      }) 
+      return(output);
+    }
+    else return(null);
+  }
+
+  
+
   async scrape(provider, prod_id, page) {
     switch (provider) {
       case 'kkdays':
         return await this.scrapeKKDays(prod_id, page);
       case 'tripcom':
         return await this.scrapeTripCom(prod_id, page);
+      case 'tripcomBD':
+        return await this.scrapeTripComBD()
       default:
         return '404 Error';
     }
