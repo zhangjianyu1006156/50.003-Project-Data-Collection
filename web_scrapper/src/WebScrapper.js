@@ -106,13 +106,24 @@ export class WebScrapper {
     return String(dataTripCom['productInfos']['0']['basicInfo']['minPrice']);
   }
 
-  async scrapeTripComBD() {
+  async scrapeTripComBD(card_name, page) {
+    const tripcom_data = [
+      {
+        card_name: "DBS/POSB",
+        url: 'https://sg.trip.com/sale/w/4193/dbs.html?locale=en_sg&curr=sgd&promo_referer=409_4193_9'
+      },
+      {
+        card_name: "OCBC",
+        url: 'https://sg.trip.com/sale/w/2952/ocbc.html?locale=en_sg&curr=sgd&promo_referer=409_2952_10'
+      }
+    ];
+
     await page.setRequestInterception(true);
-    let dataTripComBD = '';
+    let dataTripComBD = [];
     page.on('request', async (interceptedRequest) => {
       if (
         interceptedRequest.method().includes('POST') &&
-        interceptedRequest.url().includes('/queryAdsDisplayData')
+        interceptedRequest.url().includes('/getCommonCouponInfoList')
       ) {
         const methods = interceptedRequest.method();
         const headerss = interceptedRequest.headers();
@@ -128,36 +139,39 @@ export class WebScrapper {
       }
     });
 
+    const responsePromises = []; 
+
     page.on('response', async (response) => {
-      if (response.url().includes('/queryAdsDisplayData')) {
-        await page.waitForTimeout(2000);
-        try {
-          dataTripComBD = await response.json();
-        } catch (error) {}
+      if(response.url().includes('/getCommonCouponInfoList')){
+        const responsePromise = response.json().then(jsonData => {
+          dataTripComBD.push(jsonData);
+        }).catch(error => {
+          console.error('Error parsing JSON:', error);
+        });
+  
+        responsePromises.push(responsePromise);
       }
     });
-
-    await page.goto('https://sg.trip.com/sale/deals/');
+  
+    await page.goto(
+      tripcom_data.find((card) => card.card_name === card_name).url
+    );
     await page.waitForTimeout(5000);
-
-    ads = dataTripComBD["adsWidgetDataTypes"][0]["adsDisplayDataTypes"] 
-    //check if there's bank card discounts
-    const theresDiscounts = ads.some(ad => ad["tags"][0]["tagName"] == "Bank Card");
-    
-    if (theresDiscounts) {
-      var output = new Array();
-      ads.forEach((ad) => {
-        if (ad["tags"][0]["tagName"] == "Bank Card" 
-            && (ad["title"].includes("OCBC") ||ad["title"].includes("DBS/POSB"))) {
-              const disc = {"title": ad["title"],
-                            "description": ad["introduction"],
-                            "pageLink": ad["pageLink"]}
-              output.push(disc);
-            }
+    await Promise.all(responsePromises); //wait for all responses
+    await browser.close();
+  
+    let maxVal = 0;
+    let couponLeft = 0;
+    responseData.forEach((data) => {
+      coupons = data["promotionStrategyList"]
+      coupons.forEach((coupon) => {
+        if (coupon['couponAmount'] > maxVal && coupon['userProductLineId'] == 20) {
+          maxVal = coupon['couponAmount'];
+          couponLeft = coupon['couponLeft'];
+        }
       }) 
-      return(output);
-    }
-    else return(null);
+    })
+    return {maxVal : maxVal * -1, couponLeft: couponLeft};
   }
 
   
@@ -169,7 +183,7 @@ export class WebScrapper {
       case 'tripcom':
         return await this.scrapeTripCom(prod_id, page);
       case 'tripcomBD':
-        return await this.scrapeTripComBD()
+        return await this.scrapeTripComBD(card_name, page);
       default:
         return '404 Error';
     }

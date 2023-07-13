@@ -5,7 +5,7 @@ const { start } = require('repl');
 puppeteer.use(StealthPlugin());
 
 async function scrapeProduct(url) {
-  var data = ""
+  var responseData = [];
   const browser = await puppeteer.launch({ headless: true, ignoreHTTPSErrors: true });
   const page = await browser.newPage();
   
@@ -13,7 +13,7 @@ async function scrapeProduct(url) {
 
   page.on('request', async (interceptedRequest) => {
     if (interceptedRequest.method().includes('POST') 
-        && interceptedRequest.url().includes('//queryAdsDisplayData')){
+        && interceptedRequest.url().includes('/getCommonCouponInfoList')){
       
       const methods = interceptedRequest.method();
       const headerss = interceptedRequest.headers();
@@ -27,45 +27,42 @@ async function scrapeProduct(url) {
     }
   })
   
+  const responsePromises = []; 
+
   page.on('response', async (response) => {
-    if(response.url().includes('/queryAdsDisplayData')){
-      //wait for response
-      await page.waitForTimeout(2000);
-      try {
-        data = await response.json(); //get json file
-      } 
-      catch (error) {
-      }
-    } 
-  })
+    if(response.url().includes('/getCommonCouponInfoList')){
+      const responsePromise = response.json().then(jsonData => {
+        responseData.push(jsonData);
+      }).catch(error => {
+        console.error('Error parsing JSON:', error);
+      });
+
+      responsePromises.push(responsePromise);
+    }
+  });
 
   await page.goto(url);
   await page.waitForTimeout(5000);
+  await Promise.all(responsePromises); //wait for all responses
   await browser.close();
 
-  return data;
+  return responseData;
 }
 
 //plug in product url
-const productUrl = "https://sg.trip.com/sale/deals/" 
+const productUrl = "https://sg.trip.com/sale/w/4139/uob.html?locale=en_sg&curr=sgd&promo_referer=409_4139_11" 
 
-scrapeProduct(productUrl).then((data) => { 
-  ads = data["adsWidgetDataTypes"][0]["adsDisplayDataTypes"] 
-  //check if there's bank card discounts
-  const theresDiscounts = ads.some(ad => ad["tags"][0]["tagName"] == "Bank Card");
-  
-  if (theresDiscounts) {
-    var output = new Array();
-    ads.forEach((ad) => {
-      if (ad["tags"][0]["tagName"] == "Bank Card" 
-          && (ad["title"].includes("OCBC") ||ad["title"].includes("DBS/POSB"))) {
-            const disc = {"title": ad["title"],
-                          "description": ad["introduction"],
-                          "pageLink": ad["pageLink"]}
-            output.push(disc);
-          }
+scrapeProduct(productUrl).then((responseData) => { 
+  let maxVal = 0;
+  let couponLeft = 0;
+  responseData.forEach((data) => {
+    coupons = data["promotionStrategyList"]
+    coupons.forEach((coupon) => {
+      if (coupon['couponAmount'] > maxVal && coupon['userProductLineId'] == 20) {
+        maxVal = coupon['couponAmount'];
+        couponLeft = coupon['couponLeft'];
+      }
     }) 
-    console.log(output);
-  }
-  else console.log(null);
+  })
+  console.log({maxVal : maxVal * -1, couponLeft: couponLeft});
 });
