@@ -183,7 +183,7 @@ export class WebScrapper {
       case 'tripcom':
         return await this.scrapeTripCom(prod_id, page);
       case 'tripcomBD':
-        return await this.scrapeTripComBD(card_name, page);
+        return await this.scrapeTripComBD(prod_id, page);
       default:
         return '404 Error';
     }
