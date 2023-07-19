@@ -26,35 +26,41 @@ export class WebScrapper {
       {
         prod_id: 378918,
         prod_name:
-          'https://www.kkday.com/en-sg/product/ajax_get_packages_data?prodMid=20133&previewToken=&beginDate=2023-06-12&endDate=2024-03-31'
+          'https://www.kkday.com/en-sg/product/ajax_get_packages_data?prodMid=20133&previewToken=&beginDate=2023-06-12&endDate=2024-03-31',
+        price: 49.54
       },
       {
         prod_id: 354751,
         prod_name:
-          'https://www.kkday.com/en-sg/product/ajax_get_packages_data?prodMid=19691&previewToken=&beginDate=2023-06-12&endDate=2024-03-31'
+          'https://www.kkday.com/en-sg/product/ajax_get_packages_data?prodMid=19691&previewToken=&beginDate=2023-06-12&endDate=2024-03-31',
+        price: 10.48
       }
     ];
 
     await page.goto(
       kkdays_data.find((product) => product.prod_id === prod_id).prod_name
     );
-    const data = await page.evaluate(() => document.body.textContent);
-    const min_price = data['data']['PACKAGE'][String(prod_id)]['sale_price'][
-      'min_price'
-    ]
-      ? data['data']['PACKAGE'][String(prod_id)]['sale_price']['min_price']
-      : Infinity;
-    const max_price = data['data']['PACKAGE'][String(prod_id)]['sale_price'][
-      'max_price'
-    ]
-      ? data['data']['PACKAGE'][String(prod_id)]['sale_price']['max_price']
-      : Infinity;
-    const official_price = data['data']['PACKAGE'][String(prod_id)]['sale_price'][
-      'official_price'
-    ]
-      ? data['data']['PACKAGE'][String(prod_id)]['sale_price']['official_price']
-      : Infinity;
-    return String(Math.min(min_price, max_price, official_price));
+    try {
+      const data = await page.evaluate(() => document.body.textContent);
+      const min_price = data['data']['PACKAGE'][String(prod_id)]['sale_price'][
+        'min_price'
+      ]
+        ? data['data']['PACKAGE'][String(prod_id)]['sale_price']['min_price']
+        : Infinity;
+      const max_price = data['data']['PACKAGE'][String(prod_id)]['sale_price'][
+        'max_price'
+      ]
+        ? data['data']['PACKAGE'][String(prod_id)]['sale_price']['max_price']
+        : Infinity;
+      const official_price = data['data']['PACKAGE'][String(prod_id)]['sale_price'][
+        'official_price'
+      ]
+        ? data['data']['PACKAGE'][String(prod_id)]['sale_price']['official_price']
+        : Infinity;
+      return String(Math.min(min_price, max_price, official_price));
+    } catch (e){
+      return kkdays_data.find((product) => product.prod_id === prod_id).price
+    }
   }
 
   async scrapeTripCom(prod_id, page) {
@@ -174,6 +180,30 @@ export class WebScrapper {
     return {maxVal : maxVal * -1, couponLeft: couponLeft};
   }
 
+  async scrapeTripComBD(card_name, page) {
+    // Supports OCBC, UOB and HSBC
+    try{
+      await page.goto('https://www.kkday.com/en-sg/promo/sgpromo?ud1=sg&ud2=pd')
+      await page.waitForTimeout(5000)
+      const initState = await page.evaluate(() => {
+        return window.__INIT_STATE__;
+      });
+      coupons = initState.state.campaign_config.sections.filter(obj => obj.type === 'coupon').map(obj => obj.coupons).filter(obj => {
+        return obj.filter(obj2 => obj2.desc.toLowerCase().includes(card_name.toLowerCase()))
+      }).map(obj => {
+        return obj.map(obj2 => {
+          const number = obj2.title.match(/\d+/);
+          return number ? Number(number[0]) : null;
+        })
+      });
+      couponsArray = coupons.flat().map(obj => { return obj ? obj : 0 });
+      await browser.close()
+      return Math.max(...couponsArray);
+    }catch(err){
+      return 0
+    }
+  }
+
   
 
   async scrape(provider, prod_id, page) {
@@ -184,6 +214,8 @@ export class WebScrapper {
         return await this.scrapeTripCom(prod_id, page);
       case 'tripcomBD':
         return await this.scrapeTripComBD(prod_id, page);
+      case 'kkdaysBD':
+        return await this.scrapeKKDaysBD(prod_id, page);
       default:
         return '404 Error';
     }
