@@ -204,8 +204,6 @@ export class WebScrapper {
     }
   }
 
-  
-
   async scrape(provider, prod_id, page) {
     switch (provider) {
       case 'kkdays':
