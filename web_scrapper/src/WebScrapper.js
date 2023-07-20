@@ -1,7 +1,7 @@
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import puppeteer from 'puppeteer-extra';
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const puppeteer = require('puppeteer-extra');
 
-export class WebScrapper {
+class WebScrapper {
 
   static instance = null;
 
@@ -109,7 +109,7 @@ export class WebScrapper {
     );
     await page.waitForTimeout(5000);
 
-    return String(dataTripCom['productInfos']['0']['basicInfo']['minPrice']);
+    return dataTripCom['productInfos']['0']['basicInfo']['minPrice'];
   }
 
   async scrapeTripComBD(card_name, page) {
@@ -164,12 +164,11 @@ export class WebScrapper {
     );
     await page.waitForTimeout(5000);
     await Promise.all(responsePromises); //wait for all responses
-    await browser.close();
   
     let maxVal = 0;
     let couponLeft = 0;
-    responseData.forEach((data) => {
-      coupons = data["promotionStrategyList"]
+    dataTripComBD.forEach((data) => {
+      let coupons = data["promotionStrategyList"]
       coupons.forEach((coupon) => {
         if (coupon['couponAmount'] > maxVal && coupon['userProductLineId'] == 20) {
           maxVal = coupon['couponAmount'];
@@ -180,7 +179,7 @@ export class WebScrapper {
     return {maxVal : maxVal * -1, couponLeft: couponLeft};
   }
 
-  async scrapeTripComBD(card_name, page) {
+  async scrapeKKDaysBD(card_name, page) {
     // Supports OCBC, UOB and HSBC
     try{
       await page.goto('https://www.kkday.com/en-sg/promo/sgpromo?ud1=sg&ud2=pd')
@@ -228,3 +227,5 @@ export class WebScrapper {
     WebScrapper.flush();
   }
 }
+
+module.exports = { WebScrapper };
