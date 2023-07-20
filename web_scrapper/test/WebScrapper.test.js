@@ -1,4 +1,4 @@
-const {WebScrapper} = require("../src/WebScrapper");
+const {WebScrapper} = require("../web_scrapper/src/WebScrapper");
 
 describe("Test web scrapers for KKDays products:", () => {
     const web_scrapper = new WebScrapper();
@@ -72,7 +72,7 @@ describe("Test web scrapers for Trip.com products:", () => {
 describe("Test web scrapers for Trip.com discounts:", () => {
     const web_scrapper = new WebScrapper();
 
-    test ("WS_KKD_BD: scraping for OCBC discounts", async () => {
+    test ("WS_TC_BD: scraping for OCBC discounts", async () => {
         const scraping_obj = await web_scrapper.spawn();
         const disc = await web_scrapper.scrape('tripcomBD', 'OCBC', scraping_obj[0]);
         await web_scrapper.close(scraping_obj[1]);
@@ -81,7 +81,7 @@ describe("Test web scrapers for Trip.com discounts:", () => {
         expect(typeof disc['maxVal']).toBe('number')
     });
 
-    test ("WS_KKD_BD: scraping for DBS/POSB discounts", async () => {
+    test ("WS_TC_BD: scraping for DBS/POSB discounts", async () => {
         const scraping_obj = await web_scrapper.spawn();
         const disc = await web_scrapper.scrape('tripcomBD', 'DBS/POSB', scraping_obj[0]);
         await web_scrapper.close(scraping_obj[1]);
