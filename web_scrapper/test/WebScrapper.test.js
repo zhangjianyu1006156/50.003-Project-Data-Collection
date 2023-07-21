@@ -1,20 +1,25 @@
-const {WebScrapper} = require("../web_scrapper/src/WebScrapper");
+const {WebScrapper} = require("../src/WebScrapper");
 
 describe("Test web scrapers for KKDays products:", () => {
     const web_scrapper = new WebScrapper();
+    let scraping_obj;
+    
+    beforeAll ( async () => {
+        scraping_obj = await web_scrapper.spawn();
+    });
+
+    afterAll ( async () =>{
+        await web_scrapper.close(scraping_obj[1]);
+    });
 
     test ("WS_KKD_FQ: scraping Fuji-Q ticket min price", async () => {
-        const scraping_obj = await web_scrapper.spawn();
         const price = await web_scrapper.scrape('kkdays', 378918, scraping_obj[0]);
-        await web_scrapper.close(scraping_obj[1]);
 
         expect(typeof price).toBe('number');
     });
 
     test ("WS_KKD_NK: scraping Nankai ticket min price", async () => {
-        const scraping_obj = await web_scrapper.spawn();
         const price = await web_scrapper.scrape('kkdays', 354751, scraping_obj[0]);
-        await web_scrapper.close(scraping_obj[1]);
 
         expect(typeof price).toBe('number');
     });    
@@ -22,27 +27,30 @@ describe("Test web scrapers for KKDays products:", () => {
 
 describe("Test web scrapers for KKDays discounts:", () => {
     const web_scrapper = new WebScrapper();
+    let scraping_obj;
+    
+    beforeAll ( async () => {
+        scraping_obj = await web_scrapper.spawn();
+    });
+
+    afterAll ( async () =>{
+        await web_scrapper.close(scraping_obj[1]);
+    });
 
     test ("WS_KKD_BD: scraping for OCBC discounts", async () => {
-        const scraping_obj = await web_scrapper.spawn();
         const disc = await web_scrapper.scrape('kkdaysBD', 'OCBC', scraping_obj[0]);
-        await web_scrapper.close(scraping_obj[1]);
 
         expect(typeof disc).toBe('number');
     });
 
     test ("WS_KKD_BD: scraping for UOB discounts", async () => {
-        const scraping_obj = await web_scrapper.spawn();
         const disc = await web_scrapper.scrape('kkdaysBD', 'UOB', scraping_obj[0]);
-        await web_scrapper.close(scraping_obj[1]);
 
         expect(typeof disc).toBe('number');
     });
 
     test ("WS_KKD_BD: scraping for HSBC discounts", async () => {
-        const scraping_obj = await web_scrapper.spawn();
         const disc = await web_scrapper.scrape('kkdaysBD', 'HSBC', scraping_obj[0]);
-        await web_scrapper.close(scraping_obj[1]);
 
         expect(typeof disc).toBe('number');
     });
