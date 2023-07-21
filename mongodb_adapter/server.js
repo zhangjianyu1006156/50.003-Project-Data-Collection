@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-var dbAdapter = require('../data_collection/mongodb_adapter/adapter');
+var dbAdapter = require('./adapter');
 
 app.get('/', (req, res) => {
   res.send('Hello, World!');
