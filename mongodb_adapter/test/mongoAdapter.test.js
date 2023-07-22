@@ -1,4 +1,4 @@
-const mongoAdapter = require("./adapter");
+const mongoAdapter = require("../adapter");
 
 describe('MongoDB connection test', () => {
     let client; 
@@ -7,10 +7,6 @@ describe('MongoDB connection test', () => {
     
     beforeAll(async () => {
         client = await mongoAdapter.connectDB();
-    })
-
-    afterAll (async () => {
-        await client.close();
     })
 
     test('MGA_CN: Connection test', async () => {  
