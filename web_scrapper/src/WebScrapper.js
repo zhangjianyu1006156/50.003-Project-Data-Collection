@@ -1,7 +1,7 @@
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const puppeteer = require('puppeteer-extra');
+import StealthPlugin from "puppeteer-extra-plugin-stealth"
+import puppeteer from "puppeteer-extra"
 
-class WebScrapper {
+export class WebScrapper {
 
   static instance = null;
 
@@ -16,7 +16,7 @@ class WebScrapper {
 
   async spawn(){
     puppeteer.use(StealthPlugin());
-    const browser = await puppeteer.launch({ headless: true, ignoreHTTPSErrors: true })
+    const browser = await puppeteer.launch({ headless: true, ignoreHTTPSErrors: true, args: ["--no-sandbox"] })
     const page = await browser.newPage()
     return [page, browser]
   }
@@ -57,7 +57,12 @@ class WebScrapper {
       ]
         ? data['data']['PACKAGE'][String(prod_id)]['sale_price']['official_price']
         : Infinity;
-      return String(Math.min(min_price, max_price, official_price));
+
+      if(Number.isNaN(Math.min(min_price, max_price, official_price))){
+        return kkdays_data.find((product) => product.prod_id === prod_id).price
+      } else {
+        return Math.min(min_price, max_price, official_price);
+      }
     } catch (e){
       return kkdays_data.find((product) => product.prod_id === prod_id).price
     }
@@ -67,49 +72,58 @@ class WebScrapper {
     const tripcom_data = [
       {
         prod_id: 20557692,
-        prod_name: 'https://sg.trip.com/things-to-do/detail/20557692'
+        prod_name: 'https://sg.trip.com/things-to-do/detail/20557692',
+        price: 10.38
       },
       {
         prod_id: 37160766,
-        prod_name: 'https://sg.trip.com/things-to-do/detail/37160766'
+        prod_name: 'https://sg.trip.com/things-to-do/detail/37160766',
+        price: 49.45
       }
     ];
-    await page.setRequestInterception(true);
-    let dataTripCom = '';
-    page.on('request', async (interceptedRequest) => {
-      if (
-        interceptedRequest.method().includes('POST') &&
-        interceptedRequest.url().includes('/getProductInfo?_fxpcq')
-      ) {
-        const methods = interceptedRequest.method();
-        const headerss = interceptedRequest.headers();
-        const postDatas = interceptedRequest.postData();
+    try{
+      await page.setRequestInterception(true);
+      let dataTripCom = '';
+      page.on('request', async (interceptedRequest) => {
+        if (
+          interceptedRequest.method().includes('POST') &&
+          interceptedRequest.url().includes('/getProductInfo?_fxpcq')
+        ) {
+          const methods = interceptedRequest.method();
+          const headerss = interceptedRequest.headers();
+          const postDatas = interceptedRequest.postData();
 
-        interceptedRequest.continue({
-          method: methods,
-          postData: postDatas,
-          headers: headerss
-        });
+          interceptedRequest.continue({
+            method: methods,
+            postData: postDatas,
+            headers: headerss
+          });
+        } else {
+          interceptedRequest.continue();
+        }
+      });
+
+      page.on('response', async (response) => {
+        if (response.url().includes('/getProductInfo?_fxpcq')) {
+          await page.waitForTimeout(2000);
+          try {
+            dataTripCom = await response.json();
+          } catch (error) {}
+        }
+      });
+
+      await page.goto(
+        tripcom_data.find((product) => product.prod_id === prod_id).prod_name
+      );
+      await page.waitForTimeout(5000);
+      if(Number.isNaN(dataTripCom['productInfos']['0']['basicInfo']['minPrice'])){
+        return kkdays_data.find((product) => product.prod_id === prod_id).price
       } else {
-        interceptedRequest.continue();
+        return dataTripCom['productInfos']['0']['basicInfo']['minPrice'];
       }
-    });
-
-    page.on('response', async (response) => {
-      if (response.url().includes('/getProductInfo?_fxpcq')) {
-        await page.waitForTimeout(2000);
-        try {
-          dataTripCom = await response.json();
-        } catch (error) {}
-      }
-    });
-
-    await page.goto(
-      tripcom_data.find((product) => product.prod_id === prod_id).prod_name
-    );
-    await page.waitForTimeout(5000);
-
-    return dataTripCom['productInfos']['0']['basicInfo']['minPrice'];
+    } catch(e){
+      return tripcom_data.find((product) => product.prod_id === prod_id).price
+    }
   }
 
   async scrapeTripComBD(card_name, page) {
@@ -227,5 +241,3 @@ class WebScrapper {
     WebScrapper.flush();
   }
 }
-
-module.exports = { WebScrapper };
